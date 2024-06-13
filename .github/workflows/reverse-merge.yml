@@ -1,0 +1,35 @@
+name: reverge merge
+
+on:
+  workflow_call:
+    inputs:
+      from-branch:
+        description: "The branch to merge from"
+        required: true
+        type: string
+        default: "master"
+      into-branch:
+        description: "The branch to merge into"
+        required: true
+        type: string
+        default: "staging"
+      github-app-id:
+        description: "GitHub Tokenの取得に使うGitHub AppのID"
+        required: false
+        type: string
+        default: ${{ vars.ACALL_BUILD_DEPLOY_APP_ID }}
+    secrets:
+      github-app-private-key:
+        description: "GitHub Tokenの取得に使うGitHub Appの秘密鍵"
+        required: true
+
+jobs:
+  reverse-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: get-github-token
+        with:
+          app-id: ${{ inputs.github-app-id }}
+          private-key: ${{ secrets.github-app-private-key }}
+          owner: ${{ github.repository_owner }}
