@@ -1,0 +1,65 @@
+name: create PR feature to master
+
+on:
+  workflow_call:
+    inputs:
+      from-branch:
+        description: 'マージ元ブランチ'
+        required: true
+        type: string
+        default: 'feature'
+      into-branch:
+        description: 'マージ先ブランチ'
+        required: true
+        type: string
+        default: 'master'
+      pr-label:
+        description: 'PRに付与するラベル'
+        required: true
+        type: string
+        default: 'feature->master'
+      pr-template-path:
+        description: 'PRテンプレートのファイルパス'
+        required: true
+        type: string
+        default: '.github/feature-to-master-template.erb'
+      pr-assignee:
+        description: '生成するPRのassignee'
+        required: true
+        type: string
+        default: 'octocat'
+
+jobs:
+  git-pr-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: check need pr
+        run: |
+          DIFF="$(git log --no-merges --oneline origin/${{ inputs.into-branch }}..origin/${{ inputs.from-branch }})"
+          # 改行文字などをエスケープしないと環境変数代入時にエラーになる
+          DIFF="${DIFF//'%'/'%25'}"
+          DIFF="${DIFF//$'\n'/'%0A'}"
+          DIFF="${DIFF//$'\r'/'%0D'}"
+          echo "DIFF=$DIFF" >> $GITHUB_ENV
+      - name: git-pr-release
+        # from->intoで差分がある場合のみ実行
+        if: env.DIFF != ''
+        uses: bakunyo/git-pr-release-action@master
+        env:
+          GIT_PR_RELEASE_BRANCH_PRODUCTION: ${{ inputs.into-branch }}
+          GIT_PR_RELEASE_BRANCH_STAGING: ${{ inputs.from-branch }}
+          GIT_PR_RELEASE_LABELS: ${{ inputs.pr-label }}
+          GIT_PR_RELEASE_TEMPLATE: ${{ inputs.pr-template-path }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TZ: Asia/Tokyo
+        with:
+          args: '--squashed'
+      - name: set-assignees
+        run: |
+          PR_NUMBER="$(gh pr list --base ${{ inputs.into-branch }} --head ${{ inputs.from-branch }} | awk 'NR==1{print $1}')"
+          gh pr edit ${PR_NUMBER} --add-assignee ${{ inputs.pr-assignee }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }
