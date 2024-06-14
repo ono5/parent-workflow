@@ -62,4 +62,4 @@ jobs:
           PR_NUMBER="$(gh pr list --base ${{ inputs.into-branch }} --head ${{ inputs.from-branch }} | awk 'NR==1{print $1}')"
           gh pr edit ${PR_NUMBER} --add-assignee ${{ inputs.pr-assignee }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
